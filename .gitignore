@@ -1,0 +1,3 @@
+.venv
+# Các file cache
+__pycache__/

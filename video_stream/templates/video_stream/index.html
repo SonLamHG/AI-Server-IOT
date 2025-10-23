@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Live Stream - IOT WebServer</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      min-height: 100vh;
+      background: radial-gradient(1200px 600px at 10% 10%, #f3f7ff, #eaf1ff 40%, #e6f7ff 70%, #eaf7ff 100%);
+    }
+    .navbar-blur {
+      backdrop-filter: saturate(120%) blur(8px);
+      background: rgba(255, 255, 255, 0.75);
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .card {
+      border: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+    .video-frame {
+      background: #0b1727;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 360px;
+      position: relative;
+      overflow: hidden;
+      border-radius: .5rem;
+    }
+    .video-frame img {
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      background: #0b1727;
+    }
+    .badge-soft {
+      background: rgba(13,110,253,.12);
+      color: #0d6efd;
+      border: 1px solid rgba(13,110,253,.18);
+    }
+    .fire-box {
+      max-height: 440px;        /* chiều cao hộp cuộn */
+      overflow: auto;           /* bật cuộn */
+      border: 1px solid rgba(0,0,0,0.06);
+      border-radius: .5rem;
+      background: #fff;
+      padding: .25rem;
+    }
+    .fire-item .video-frame { min-height: 120px; } /* thumbnail nhỏ gọn */
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-blur sticky-top">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="#">IOT WebServer</a>
+      <div class="d-flex gap-2 ms-auto">
+        <a class="btn btn-outline-primary btn-sm" href="video_feed/" target="_blank">Mở luồng gốc</a>
+    <a class="btn btn-outline-secondary btn-sm" href="snapshot/" target="_blank">Ảnh lửa mới nhất</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container py-4 py-lg-5">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="video-frame rounded">
+          <img id="liveImg" src="video_feed/" alt="Live stream" />
+        </div>
+        <div id="liveError" class="alert alert-warning mt-2 d-none">
+          Không tải được luồng video. Kiểm tra nguồn stream hoặc thử tải lại.
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <h6 class="mb-2">Lịch sử cảnh báo 🔥</h6>
+        <div class="card">
+          <div class="card-body p-2">
+            <div id="fireBox" class="fire-box">
+              <div id="fireGrid" class="row row-cols-1 g-2"></div>
+              <div id="fireEnd" class="text-center text-muted small py-2 d-none">Hết ảnh.</div>
+              <div id="fireLoading" class="text-center text-muted small py-2 d-none">Đang tải...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="container py-4 text-center text-muted">
+    <small>© IOT WebServer — Live stream và phân tích ảnh</small>
+  </footer>
+
+  <script>
+  const liveImg = document.getElementById('liveImg');
+  const liveError = document.getElementById('liveError');
+
+  const fireBox = document.getElementById('fireBox');
+  const fireGrid = document.getElementById('fireGrid');
+  const fireLoading = document.getElementById('fireLoading');
+  const fireEnd = document.getElementById('fireEnd');
+
+  let pageSize = 20;
+  let offset = 0;
+  let loading = false;
+  let endReached = false;
+  let fileSet = new Set();  // tránh trùng
+
+  function addFiles(files, { prepend = false } = {}) {
+    if (!files || !files.length) return 0;
+    // Nếu prepend nhiều ảnh, duyệt ngược để vẫn giữ thứ tự mới -> cũ trên cùng
+    const arr = prepend ? [...files].reverse() : files;
+    let added = 0;
+
+    for (const f of arr) {
+      const name = typeof f === 'string' ? f : f.name;
+      const iso = typeof f === 'object' && f.iso ? f.iso : '';
+      if (fileSet.has(name)) continue;  // dedupe
+      fileSet.add(name);
+      added++;
+
+      const col = document.createElement('div');
+      col.className = 'col fire-item';
+
+      const frame = document.createElement('div');
+      frame.className = 'video-frame rounded';
+
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.alt = name;
+      img.src = `/media/fire/${encodeURIComponent(name)}?t=${Date.now()}`;
+
+      const cap = document.createElement('div');
+      cap.className = 'small text-muted mt-1';
+      cap.textContent = iso || name;
+
+      frame.appendChild(img);
+      col.appendChild(frame);
+      col.appendChild(cap);
+
+      if (prepend) fireGrid.insertBefore(col, fireGrid.firstChild);
+      else fireGrid.appendChild(col);
+    }
+    return added;
+  }
+
+  async function fetchNextPage() {
+    if (loading || endReached) return;
+    loading = true;
+    fireLoading.classList.remove('d-none');
+    try {
+      const res = await fetch(`fire_list/?offset=${offset}&limit=${pageSize}`, { cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const files = data.files || [];
+      const added = addFiles(files);     // append giữ thứ tự mới -> cũ
+      offset += added;                   // cập nhật offset theo số ảnh thật sự thêm
+      if (offset >= (data.total || 0) || added === 0) {
+        endReached = true;
+        fireEnd.classList.remove('d-none');
+      }
+    } catch {} finally {
+      loading = false;
+      fireLoading.classList.add('d-none');
+    }
+  }
+
+  // Trang đầu (mới -> cũ)
+  fetchNextPage();
+
+  // Cuộn gần cuối -> tải thêm (cũ hơn)
+  fireBox.addEventListener('scroll', () => {
+    const nearBottom = fireBox.scrollTop + fireBox.clientHeight >= fireBox.scrollHeight - 40;
+    if (nearBottom) fetchNextPage();
+  });
+
+  // SSE: có ảnh mới -> prepend lên đầu, tăng offset để phân trang tiếp tục chính xác
+  function initSSE() {
+    try {
+      const es = new EventSource('fire_events/');
+      es.onmessage = async () => {
+        try {
+          const res = await fetch(`fire_list/?offset=0&limit=${pageSize}`, { cache: 'no-store' });
+          if (!res.ok) return;
+          const data = await res.json();
+          const latest = data.files || [];
+          const added = addFiles(latest, { prepend: true });
+          // Tăng offset theo số ảnh mới để lần fetchNextPage tiếp theo không bị trùng
+          if (added > 0) offset += added;
+        } catch {}
+      };
+    } catch {}
+  }
+  initSSE();
+
+  // Lỗi luồng video
+  liveImg.addEventListener('load', () => liveError.classList.add('d-none'));
+  liveImg.addEventListener('error', () => liveError.classList.remove('d-none'));
+  </script>
+</html>
