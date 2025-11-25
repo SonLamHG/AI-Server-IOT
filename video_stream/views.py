@@ -21,11 +21,11 @@ def index(request):
 
 @require_GET
 def video_feed(request):
+    """Stream video feed as MJPEG."""
     grabber = FrameGrabber.get_instance()
-    boundary = 'frame'
     return StreamingHttpResponse(
-        grabber.mjpeg_generator(),
-        content_type=f'multipart/x-mixed-replace; boundary={boundary}'
+        grabber.generate_mjpeg_stream(),
+        content_type='multipart/x-mixed-replace; boundary=frame'
     )
 
 
@@ -40,22 +40,44 @@ def snapshot(request):
 
 @require_GET
 def fire_list(request):
+    """List fire detection images with pagination."""
     save_dir = Path(getattr(settings, 'FIRE_SAVE_DIR', Path(settings.BASE_DIR) / 'media' / 'fire'))
+    
+    # Parse pagination parameters
+    try:
+        offset = max(0, int(request.GET.get('offset', 0)))
+        limit = max(1, min(100, int(request.GET.get('limit', 20))))
+    except ValueError:
+        offset, limit = 0, 20
+    
     files = []
+    total = 0
     latest_mtime = 0
+    
     if save_dir.exists():
-        pics = sorted(save_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
-        limit = max(1, int(request.GET.get('limit', 5)))
-        files = [p.name for p in pics[:limit]]
-        if pics:
-            latest_mtime = int(pics[0].stat().st_mtime)
-    # ETag để client có thể If-None-Match
-    etag = f'W/"{latest_mtime}-{len(files)}-{files[0] if files else "none"}"'
+        all_pics = sorted(save_dir.glob('*.jpg'), key=lambda p: p.stat().st_mtime, reverse=True)
+        total = len(all_pics)
+        
+        # Apply pagination
+        pics = all_pics[offset:offset + limit]
+        files = [{'name': p.name, 'iso': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(p.stat().st_mtime))} for p in pics]
+        
+        if all_pics:
+            latest_mtime = int(all_pics[0].stat().st_mtime)
+    
+    # ETag for caching
+    etag = f'W/"{latest_mtime}-{total}"'
     if request.headers.get('If-None-Match') == etag:
         return HttpResponse(status=304)
-    resp = JsonResponse({'files': files})
-    resp['ETag'] = etag
-    return resp
+    
+    response = JsonResponse({
+        'files': files,
+        'total': total,
+        'offset': offset,
+        'limit': limit
+    })
+    response['ETag'] = etag
+    return response
 
 
 @require_GET

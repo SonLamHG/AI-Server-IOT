@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-6w&1n=ho_-gop=@t39mszbqo_tslbd+4%984&aam9l!2!+k0*x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -128,11 +128,15 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # --- Video stream configuration ---
 # Set the default video source URL for the frame grabber
 # You can override this with an environment variable or in local settings
+# Video source: HTTP URL, RTSP stream, webcam index (0, 1, 2...), or file path
 # VIDEO_SOURCE_URL = os.getenv('VIDEO_SOURCE_URL', 'http://127.0.0.1:5000/video_feed')
-VIDEO_SOURCE_URL = os.getenv('VIDEO_SOURCE_URL', 'http://192.168.137.19:81/stream')
-VIDEO_MAX_WIDTH = 640  # reduce bandwidth; set to None to disable
-VIDEO_TARGET_FPS = 30  # grabber throttling; set None to read as fast as possible
-VIDEO_JPEG_QUALITY = 80
+VIDEO_SOURCE_URL = os.getenv('VIDEO_SOURCE_URL', 'http://192.168.27.238:81/stream')
+
+# Video processing configuration
+VIDEO_MAX_WIDTH = None  # Không resize, dùng resolution gốc (set số để resize)
+VIDEO_TARGET_FPS = None  # Không throttle, lấy FPS gốc (set số để giới hạn FPS)
+VIDEO_JPEG_QUALITY = 90  # Chất lượng JPEG (10-100, cao hơn = chất lượng tốt hơn)
+VIDEO_BUFFER_SIZE = 5  # OpenCV buffer size (1-10, nhỏ = latency thấp, lớn = ít drop frames)
 
 # --- Fire detection saving configuration ---
 # Where to save images when fire is detected

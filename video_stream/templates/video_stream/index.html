@@ -3,198 +3,774 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Live Stream - IOT WebServer</title>
+  <title>Fire Detection System - IOT WebServer</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --primary-color: #0d6efd;
+      --danger-color: #dc3545;
+      --dark-bg: #0f172a;
+      --card-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    }
+    
     body {
       min-height: 100vh;
-      background: radial-gradient(1200px 600px at 10% 10%, #f3f7ff, #eaf1ff 40%, #e6f7ff 70%, #eaf7ff 100%);
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
     }
-    .navbar-blur {
-      backdrop-filter: saturate(120%) blur(8px);
-      background: rgba(255, 255, 255, 0.75);
-      border-bottom: 1px solid rgba(0,0,0,0.06);
+    
+    .navbar-custom {
+      backdrop-filter: blur(20px);
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      box-shadow: 0 2px 20px rgba(0,0,0,0.05);
     }
-    .card {
-      border: 1px solid rgba(0,0,0,0.06);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-    }
-    .video-frame {
-      background: #0b1727;
+    
+    .navbar-brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: var(--dark-bg) !important;
       display: flex;
       align-items: center;
-      justify-content: center;
-      min-height: 360px;
+      gap: 0.5rem;
+    }
+    
+    .main-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    
+    .video-container {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      height: 100%;
+    }
+      
+    .video-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .video-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--dark-bg);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+    }
+    
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 2rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .status-indicator .pulse {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .video-wrapper {
       position: relative;
-      overflow: hidden;
-      border-radius: .5rem;
-    }
-    .video-frame img {
       width: 100%;
-      height: auto;
+      padding-bottom: 75%; /* 4:3 aspect ratio */
+      background: var(--dark-bg);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .video-wrapper img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      background: #0b1727;
+      background: var(--dark-bg);
     }
-    .badge-soft {
-      background: rgba(13,110,253,.12);
-      color: #0d6efd;
-      border: 1px solid rgba(13,110,253,.18);
+    
+    .fire-panel {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      height: 100%;
+      display: flex;
+      flex-direction: column;
     }
-    .fire-box {
-      max-height: 440px;        /* chiều cao hộp cuộn */
-      overflow: auto;           /* bật cuộn */
-      border: 1px solid rgba(0,0,0,0.06);
-      border-radius: .5rem;
-      background: #fff;
-      padding: .25rem;
+    
+    .fire-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f1f5f9;
     }
-    .fire-item .video-frame { min-height: 120px; } /* thumbnail nhỏ gọn */
+    
+    .fire-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--dark-bg);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+    }
+    
+    .fire-count {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      color: white;
+      padding: 0.35rem 0.85rem;
+      border-radius: 2rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(220,53,69,0.3);
+    }
+    
+    .fire-list {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding-right: 0.5rem;
+    }
+    
+    .fire-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .fire-list::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+    
+    .fire-list::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+    
+    .fire-list::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    
+    .fire-item {
+      background: #f8fafc;
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      margin-bottom: 0.75rem;
+      transition: all 0.2s;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .fire-item:hover {
+      background: #f1f5f9;
+      transform: translateX(4px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .fire-item-image {
+      position: relative;
+      width: 100%;
+      padding-bottom: 75%; /* 4:3 aspect ratio */
+      background: var(--dark-bg);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    
+    .fire-item-image img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .fire-item-time {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+    
+    .fire-empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #94a3b8;
+    }
+    
+    .fire-empty i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    
+    .alert-custom {
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .loading-spinner {
+      text-align: center;
+      padding: 1rem;
+      color: #94a3b8;
+    }
+    
+    .spinner-border-sm {
+      width: 1.2rem;
+      height: 1.2rem;
+      border-width: 2px;
+    }
+    
+    footer {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+      color: white;
+      text-align: center;
+      padding: 1.5rem;
+      margin-top: 3rem;
+      border-radius: 1rem;
+    }
+    
+    @media (max-width: 991px) {
+      .video-container {
+        margin-bottom: 1.5rem;
+      }
+      
+      .fire-panel {
+        max-height: 600px;
+      }
+    }
+    
+    .sensor-panel {
+      background: white;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+      margin-top: 1.5rem;
+    }
+    
+    .sensor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid #f1f5f9;
+    }
+    
+    .sensor-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--dark-bg);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0;
+    }
+    
+    .sensor-values {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .sensor-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.25rem;
+      border-radius: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .sensor-card.smoke {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .sensor-card.flame {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+    
+    .sensor-label {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .sensor-value {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-top: 1rem;
+    }
+    
+    @media (min-width: 992px) {
+      .fire-list {
+        max-height: calc(100vh - 300px);
+      }
+    }
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-blur sticky-top">
-    <div class="container">
-      <a class="navbar-brand fw-semibold" href="#">IOT WebServer</a>
-      <div class="d-flex gap-2 ms-auto">
-        <a class="btn btn-outline-primary btn-sm" href="video_feed/" target="_blank">Mở luồng gốc</a>
-    <a class="btn btn-outline-secondary btn-sm" href="snapshot/" target="_blank">Ảnh lửa mới nhất</a>
-      </div>
+  <!-- Navigation -->
+  <nav class="navbar navbar-expand-lg navbar-custom sticky-top">
+    <div class="container-fluid px-4">
+      <a class="navbar-brand" href="#">
+        <i class="bi bi-camera-video-fill"></i>
+        Fire Detection System
+      </a>
     </div>
   </nav>
 
-  <main class="container py-4 py-lg-5">
+  <!-- Main Content -->
+  <main class="main-container">
     <div class="row g-4">
+      <!-- Video Feed Section -->
       <div class="col-lg-8">
-        <div class="video-frame rounded">
-          <img id="liveImg" src="video_feed/" alt="Live stream" />
-        </div>
-        <div id="liveError" class="alert alert-warning mt-2 d-none">
-          Không tải được luồng video. Kiểm tra nguồn stream hoặc thử tải lại.
+        <div class="video-container">
+          <div class="video-header">
+            <h5 class="video-title">
+              <i class="bi bi-play-circle-fill text-primary"></i>
+              Live Video Stream
+            </h5>
+            <span class="status-indicator">
+              <span class="pulse"></span>
+              STREAMING
+            </span>
+          </div>
+          
+          <div class="video-wrapper">
+            <img id="liveImg" src="video_feed/" alt="Live stream" />
+          </div>
+          
+          <div id="liveError" class="alert-custom d-none">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>
+              <strong>Lỗi kết nối</strong><br>
+              <small>Không tải được luồng video. Vui lòng kiểm tra nguồn stream.</small>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Fire Detection History -->
       <div class="col-lg-4">
-        <h6 class="mb-2">Lịch sử cảnh báo 🔥</h6>
-        <div class="card">
-          <div class="card-body p-2">
-            <div id="fireBox" class="fire-box">
-              <div id="fireGrid" class="row row-cols-1 g-2"></div>
-              <div id="fireEnd" class="text-center text-muted small py-2 d-none">Hết ảnh.</div>
-              <div id="fireLoading" class="text-center text-muted small py-2 d-none">Đang tải...</div>
+        <div class="fire-panel">
+          <div class="fire-header">
+            <h5 class="fire-title">
+              <i class="bi bi-fire text-danger"></i>
+              Cảnh báo phát hiện lửa
+            </h5>
+            <span id="fireCount" class="fire-count">0</span>
+          </div>
+          
+          <div id="fireList" class="fire-list">
+            <div id="fireGrid"></div>
+            <div id="fireLoading" class="loading-spinner d-none">
+              <div class="spinner-border spinner-border-sm text-primary" role="status">
+                <span class="visually-hidden">Đang tải...</span>
+              </div>
+              <div class="mt-2 small">Đang tải...</div>
+            </div>
+            <div id="fireEnd" class="text-center text-muted small py-3 d-none">
+              <i class="bi bi-check-circle"></i> Đã tải hết
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Sensor Data Visualization -->
+    <div class="row mt-4">
+      <div class="col-12">
+        <div class="sensor-panel">
+          <div class="sensor-header">
+            <h5 class="sensor-title">
+              <i class="bi bi-graph-up-arrow"></i>
+              Dữ liệu cảm biến thời gian thực
+            </h5>
+            <span class="status-indicator">
+              <span class="pulse"></span>
+              <span id="sensorStatus">Đang chờ dữ liệu...</span>
+            </span>
+          </div>
+          
+          <div class="sensor-values">
+            <div class="sensor-card smoke">
+              <div class="sensor-label">
+                <i class="bi bi-cloud-fog2-fill"></i>
+                Khói (Smoke)
+              </div>
+              <p class="sensor-value" id="smokeValue">0.0<small style="font-size: 1rem;">%</small></p>
+            </div>
+            
+            <div class="sensor-card flame">
+              <div class="sensor-label">
+                <i class="bi bi-fire"></i>
+                Lửa (Flame)
+              </div>
+              <p class="sensor-value" id="flameValue">0.0<small style="font-size: 1rem;">%</small></p>
+            </div>
+            
+            <div class="sensor-card">
+              <div class="sensor-label">
+                <i class="bi bi-hdd-network"></i>
+                Thiết bị
+              </div>
+              <p class="sensor-value" id="deviceName" style="font-size: 1.5rem;">N/A</p>
+            </div>
+          </div>
+          
+          <div class="chart-container">
+            <canvas id="sensorChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="d-flex align-items-center justify-content-center gap-2">
+        <i class="bi bi-shield-check"></i>
+        <span>© 2025 IOT Fire Detection System — Real-time monitoring & AI analysis</span>
+      </div>
+    </footer>
   </main>
 
-  <footer class="container py-4 text-center text-muted">
-    <small>© IOT WebServer — Live stream và phân tích ảnh</small>
-  </footer>
-
   <script>
+  // DOM Elements
   const liveImg = document.getElementById('liveImg');
   const liveError = document.getElementById('liveError');
-
-  const fireBox = document.getElementById('fireBox');
+  const fireList = document.getElementById('fireList');
   const fireGrid = document.getElementById('fireGrid');
   const fireLoading = document.getElementById('fireLoading');
   const fireEnd = document.getElementById('fireEnd');
+  const fireCount = document.getElementById('fireCount');
 
+  // State
   let pageSize = 20;
   let offset = 0;
   let loading = false;
   let endReached = false;
-  let fileSet = new Set();  // tránh trùng
+  let fileSet = new Set();
+  let totalCount = 0;
 
+  // Update fire count badge
+  function updateCount() {
+    fireCount.textContent = totalCount;
+    fireCount.style.transform = 'scale(1.1)';
+    setTimeout(() => fireCount.style.transform = 'scale(1)', 200);
+  }
+
+  // Create fire item element
+  function createFireItem(file) {
+    const name = typeof file === 'string' ? file : file.name;
+    const iso = typeof file === 'object' && file.iso ? file.iso : name;
+    
+    const item = document.createElement('div');
+    item.className = 'fire-item';
+    item.innerHTML = `
+      <div class="fire-item-image">
+        <img src="/media/fire/${encodeURIComponent(name)}?t=${Date.now()}" 
+             alt="${name}" 
+             loading="lazy">
+      </div>
+      <div class="fire-item-time">
+        <i class="bi bi-clock"></i>
+        ${iso}
+      </div>
+    `;
+    return item;
+  }
+
+  // Add files to grid
   function addFiles(files, { prepend = false } = {}) {
     if (!files || !files.length) return 0;
-    // Nếu prepend nhiều ảnh, duyệt ngược để vẫn giữ thứ tự mới -> cũ trên cùng
+    
     const arr = prepend ? [...files].reverse() : files;
     let added = 0;
 
     for (const f of arr) {
       const name = typeof f === 'string' ? f : f.name;
-      const iso = typeof f === 'object' && f.iso ? f.iso : '';
-      if (fileSet.has(name)) continue;  // dedupe
+      if (fileSet.has(name)) continue;
+      
       fileSet.add(name);
       added++;
-
-      const col = document.createElement('div');
-      col.className = 'col fire-item';
-
-      const frame = document.createElement('div');
-      frame.className = 'video-frame rounded';
-
-      const img = document.createElement('img');
-      img.loading = 'lazy';
-      img.alt = name;
-      img.src = `/media/fire/${encodeURIComponent(name)}?t=${Date.now()}`;
-
-      const cap = document.createElement('div');
-      cap.className = 'small text-muted mt-1';
-      cap.textContent = iso || name;
-
-      frame.appendChild(img);
-      col.appendChild(frame);
-      col.appendChild(cap);
-
-      if (prepend) fireGrid.insertBefore(col, fireGrid.firstChild);
-      else fireGrid.appendChild(col);
+      
+      const item = createFireItem(f);
+      if (prepend) {
+        fireGrid.insertBefore(item, fireGrid.firstChild);
+      } else {
+        fireGrid.appendChild(item);
+      }
     }
+    
     return added;
   }
 
+  // Fetch next page of fire images
   async function fetchNextPage() {
     if (loading || endReached) return;
+    
     loading = true;
     fireLoading.classList.remove('d-none');
+    
     try {
       const res = await fetch(`fire_list/?offset=${offset}&limit=${pageSize}`, { cache: 'no-store' });
       if (!res.ok) throw new Error('HTTP ' + res.status);
+      
       const data = await res.json();
       const files = data.files || [];
-      const added = addFiles(files);     // append giữ thứ tự mới -> cũ
-      offset += added;                   // cập nhật offset theo số ảnh thật sự thêm
-      if (offset >= (data.total || 0) || added === 0) {
+      totalCount = data.total || 0;
+      
+      const added = addFiles(files);
+      offset += added;
+      
+      updateCount();
+      
+      if (offset >= totalCount || added === 0) {
         endReached = true;
         fireEnd.classList.remove('d-none');
       }
-    } catch {} finally {
+    } catch (err) {
+      console.error('Failed to fetch fire list:', err);
+    } finally {
       loading = false;
       fireLoading.classList.add('d-none');
     }
   }
 
-  // Trang đầu (mới -> cũ)
+  // Initial load
   fetchNextPage();
 
-  // Cuộn gần cuối -> tải thêm (cũ hơn)
-  fireBox.addEventListener('scroll', () => {
-    const nearBottom = fireBox.scrollTop + fireBox.clientHeight >= fireBox.scrollHeight - 40;
-    if (nearBottom) fetchNextPage();
+  // Infinite scroll
+  fireList.addEventListener('scroll', () => {
+    const scrollBottom = fireList.scrollHeight - fireList.scrollTop - fireList.clientHeight;
+    if (scrollBottom < 100) {
+      fetchNextPage();
+    }
   });
 
-  // SSE: có ảnh mới -> prepend lên đầu, tăng offset để phân trang tiếp tục chính xác
+  // Server-Sent Events for real-time updates
+  let sseTimeout = null;
   function initSSE() {
     try {
       const es = new EventSource('fire_events/');
+      
       es.onmessage = async () => {
-        try {
-          const res = await fetch(`fire_list/?offset=0&limit=${pageSize}`, { cache: 'no-store' });
-          if (!res.ok) return;
-          const data = await res.json();
-          const latest = data.files || [];
-          const added = addFiles(latest, { prepend: true });
-          // Tăng offset theo số ảnh mới để lần fetchNextPage tiếp theo không bị trùng
-          if (added > 0) offset += added;
-        } catch {}
+        clearTimeout(sseTimeout);
+        sseTimeout = setTimeout(async () => {
+          try {
+            const res = await fetch(`fire_list/?offset=0&limit=${pageSize}`, { cache: 'no-store' });
+            if (!res.ok) return;
+            
+            const data = await res.json();
+            const latest = data.files || [];
+            totalCount = data.total || 0;
+            
+            const added = addFiles(latest, { prepend: true });
+            if (added > 0) {
+              offset += added;
+              updateCount();
+              
+              // Smooth scroll to top
+              fireList.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+          } catch (err) {
+            console.error('SSE fetch error:', err);
+          }
+        }, 500);
       };
-    } catch {}
+      
+      es.onerror = () => {
+        console.warn('SSE connection error, reconnecting...');
+      };
+    } catch (err) {
+      console.error('SSE init error:', err);
+    }
   }
-  initSSE();
+  
+  // Initialize SSE after initial load
+  setTimeout(initSSE, 1000);
 
-  // Lỗi luồng video
-  liveImg.addEventListener('load', () => liveError.classList.add('d-none'));
-  liveImg.addEventListener('error', () => liveError.classList.remove('d-none'));
+  // Video stream error handling
+  liveImg.addEventListener('load', () => {
+    liveError.classList.add('d-none');
+  });
+  
+  liveImg.addEventListener('error', () => {
+    liveError.classList.remove('d-none');
+  });
+
+  // ========== SENSOR DATA VISUALIZATION ==========
+  const smokeValueEl = document.getElementById('smokeValue');
+  const flameValueEl = document.getElementById('flameValue');
+  const deviceNameEl = document.getElementById('deviceName');
+  const sensorStatusEl = document.getElementById('sensorStatus');
+
+  // Chart setup
+  const ctx = document.getElementById('sensorChart').getContext('2d');
+  const maxDataPoints = 20; // Show last 20 data points
+  
+  const chartData = {
+    labels: [],
+    datasets: [
+      {
+        label: 'Khói (%)',
+        data: [],
+        borderColor: '#f5576c',
+        backgroundColor: 'rgba(245, 87, 108, 0.1)',
+        tension: 0.4,
+        fill: true
+      },
+      {
+        label: 'Lửa (%)',
+        data: [],
+        borderColor: '#fee140',
+        backgroundColor: 'rgba(254, 225, 64, 0.1)',
+        tension: 0.4,
+        fill: true
+      }
+    ]
+  };
+
+  const sensorChart = new Chart(ctx, {
+    type: 'line',
+    data: chartData,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top',
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          ticks: {
+            callback: function(value) {
+              return value + '%';
+            }
+          }
+        },
+        x: {
+          display: true,
+          ticks: {
+            maxRotation: 45,
+            minRotation: 45
+          }
+        }
+      },
+      animation: {
+        duration: 750
+      }
+    }
+  });
+
+  // Update chart with new data
+  function updateChart(smoke, flame, timestamp) {
+    const timeLabel = new Date(timestamp).toLocaleTimeString('vi-VN');
+    
+    // Add new data
+    chartData.labels.push(timeLabel);
+    chartData.datasets[0].data.push(smoke);
+    chartData.datasets[1].data.push(flame);
+    
+    // Keep only last N points
+    if (chartData.labels.length > maxDataPoints) {
+      chartData.labels.shift();
+      chartData.datasets[0].data.shift();
+      chartData.datasets[1].data.shift();
+    }
+    
+    sensorChart.update();
+  }
+
+  // Update sensor values display
+  function updateSensorDisplay(data) {
+    smokeValueEl.innerHTML = `${data.smoke.toFixed(1)}<small style="font-size: 1rem;">%</small>`;
+    flameValueEl.innerHTML = `${data.flame.toFixed(1)}<small style="font-size: 1rem;">%</small>`;
+    deviceNameEl.textContent = data.device;
+    sensorStatusEl.textContent = 'Đang nhận dữ liệu';
+    
+    // Add animation
+    smokeValueEl.parentElement.style.transform = 'scale(1.05)';
+    flameValueEl.parentElement.style.transform = 'scale(1.05)';
+    setTimeout(() => {
+      smokeValueEl.parentElement.style.transform = 'scale(1)';
+      flameValueEl.parentElement.style.transform = 'scale(1)';
+    }, 200);
+  }
+
+  // Fetch sensor data periodically
+  async function fetchSensorData() {
+    try {
+      const response = await fetch('/api/sensor/', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Failed to fetch');
+      
+      const data = await response.json();
+      
+      if (data.latest) {
+        updateSensorDisplay(data.latest);
+        updateChart(data.latest.smoke, data.latest.flame, data.latest.received_at);
+      }
+    } catch (error) {
+      console.error('Error fetching sensor data:', error);
+      sensorStatusEl.textContent = 'Lỗi kết nối';
+    }
+  }
+
+  // Initial fetch and set interval for updates
+  fetchSensorData();
+  setInterval(fetchSensorData, 5000); // Fetch every 5 seconds
   </script>
 </html>
